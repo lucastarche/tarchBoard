@@ -31,6 +31,9 @@ pub struct CurrentCondition {
     #[serde(deserialize_with = "de_from_str")]
     pub humidity: f64,
 
+    #[serde(rename = "weatherDesc", deserialize_with = "de_first_of_value_arr")]
+    pub weather_description: String,
+
     #[serde(rename = "localObsDateTime")]
     pub last_update_local_time: String,
 }

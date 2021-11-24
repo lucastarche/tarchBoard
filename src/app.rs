@@ -4,21 +4,38 @@ use std::time::Duration;
 use std::time::Instant;
 
 pub struct App {
-    weather_query: Option<String>,
-    weather: Option<WeatherResponse>,
-    last_weather_update: Instant,
+    pub weather: Option<WeatherState>,
 }
 
-impl App {
-    pub fn set_weather_query(&mut self, weather_query: String) {
-        self.weather_query = Some(weather_query);
+pub struct WeatherState {
+    place: String,
+    query: String,
+    response: Option<WeatherResponse>,
+    last_update: Instant,
+}
+
+impl Default for WeatherState {
+    fn default() -> Self {
+        Self {
+            place: Default::default(),
+            query: Default::default(),
+            response: None,
+            last_update: Instant::now(),
+        }
+    }
+}
+
+impl WeatherState {
+    pub fn set_query(&mut self, place: String, arguments: String) {
+        self.query = format!("https://wttr.in/{}?{}", place, arguments);
+        self.place = place;
         self.update_weather();
     }
 
-    fn update_weather(&mut self) {
-        self.last_weather_update = Instant::now();
-        match retrieve_weather("http://wttr.in/Detroit?format=j1") {
-            Ok(weather) => self.weather = Some(weather),
+    pub fn update_weather(&mut self) {
+        self.last_update = Instant::now();
+        match retrieve_weather(&self.query) {
+            Ok(weather) => self.response = Some(weather),
             Err(why) => println!("Error retrieving weather: {}", why),
         }
     }
@@ -27,10 +44,18 @@ impl App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            weather_query: None,
-            weather: None,
-            last_weather_update: Instant::now(),
+            weather: Default::default(),
         }
+    }
+}
+
+impl App {
+    pub fn set_weather_query(&mut self, place: String, arguments: String) {
+        if self.weather.is_none() {
+            self.weather = Some(WeatherState::default());
+        }
+        // UNWRAP SAFETY: self.weather will always be Some at this point, since we set it in the block above
+        self.weather.as_mut().unwrap().set_query(place, arguments);
     }
 }
 
@@ -39,34 +64,44 @@ impl epi::App for App {
         "tarch_board"
     }
 
+    fn clear_color(&self) -> egui::Rgba {
+        egui::Rgba::from_black_alpha(0.0)
+    }
+
     fn update(&mut self, ctx: &eframe::egui::CtxRef, _frame: &mut eframe::epi::Frame<'_>) {
         const ONE_HOUR: Duration = Duration::from_secs(3600);
 
-        if self.last_weather_update.elapsed() > ONE_HOUR {
-            self.update_weather();
-        }
+        if let Some(weather) = &mut self.weather {
+            if weather.last_update.elapsed() > ONE_HOUR {
+                weather.update_weather();
+            }
 
-        if let Some(weather) = &self.weather {
-            egui::CentralPanel::default().show(ctx, |ui| {
-                ui.label(&format!(
-                    "Temperature: {}°C",
-                    weather.current_condition.temperature
-                ));
-                ui.label(&format!(
-                    "Feels like: {}°C",
-                    weather.current_condition.feels_like
-                ));
-                ui.label(&format!(
-                    "{}, {}, {}",
-                    weather.nearest_area.country,
-                    weather.nearest_area.region,
-                    weather.nearest_area.area_name
-                ));
-                ui.label(&weather.current_condition.last_update_local_time);
-            });
+            if let Some(response) = &weather.response {
+                let current_condition = &response.current_condition;
+                let nearest_area = &response.nearest_area;
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    ui.heading(format!("Weather report: {}", weather.place));
+                    ui.label(&current_condition.weather_description);
+                    ui.label(format!(
+                        "{}°C ({}°C)",
+                        current_condition.temperature, current_condition.feels_like
+                    ));
+                    ui.label(format!(
+                        "{}, {}, {}",
+                        nearest_area.country, nearest_area.region, nearest_area.area_name
+                    ));
+                    ui.label(format!(
+                        "Last update: {}",
+                        &current_condition.last_update_local_time
+                    ));
+                });
+            } else {
+                egui::CentralPanel::default()
+                    .show(ctx, |ui| ui.label("Could not retrieve weather data"));
+            }
         } else {
             egui::CentralPanel::default()
-                .show(ctx, |ui| ui.label("Could not retrieve weather data :("));
+                .show(ctx, |ui| ui.label("No weather target set in place"));
         }
     }
 }
