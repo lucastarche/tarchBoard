@@ -1,4 +1,5 @@
 mod app;
+mod view;
 mod weather;
 
 use app::App;
