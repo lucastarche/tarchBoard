@@ -4,7 +4,8 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 pub fn retrieve_weather(query: &str) -> Result<WeatherResponse> {
-    let response: WeatherResponse = ureq::get(query).call()?.into_json()?;
+    let query = format!("https://wttr.in/{}?format=j1", query);
+    let response: WeatherResponse = ureq::get(&query).call()?.into_json()?;
     Ok(response)
 }
 
