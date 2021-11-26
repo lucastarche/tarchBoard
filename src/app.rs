@@ -1,14 +1,18 @@
-use crate::{view::View, weather::WeatherWidget};
+use crate::{clock::TimezoneDropdown, view::View, weather::WeatherWidget};
 
 use eframe::{egui, epi};
 
 pub struct App {
     pub weather: Option<WeatherWidget>,
+    pub timezone_dropdown: TimezoneDropdown,
 }
 
 impl Default for App {
     fn default() -> Self {
-        Self { weather: None }
+        Self {
+            weather: None,
+            timezone_dropdown: Default::default(),
+        }
     }
 }
 
@@ -32,6 +36,7 @@ impl epi::App for App {
             if let Some(widget) = &mut self.weather {
                 widget.ui(ui);
             }
+            self.timezone_dropdown.ui(ui);
         });
     }
 }

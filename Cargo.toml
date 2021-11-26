@@ -7,8 +7,12 @@ edition = "2018"
 
 [dependencies]
 eframe = { version = "*", default-features = false, features = ["default_fonts", "egui_glow"] }
+
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
 ureq = { version = "*", features = ["json"] }
 anyhow = "1.0.47"
+
 chrono = "0.4.0"
+chrono-tz = "0.6.0"
