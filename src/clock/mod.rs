@@ -1,3 +1,4 @@
 mod timezone_dropdown;
+mod widget;
 
-pub use timezone_dropdown::TimezoneDropdown;
+pub use widget::ClockWidget;

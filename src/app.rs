@@ -1,17 +1,17 @@
-use crate::{clock::TimezoneDropdown, view::View, weather::WeatherWidget};
+use crate::{clock::ClockWidget, view::UiWidget, weather::WeatherWidget};
 
-use eframe::{egui, epi};
+use eframe::epi;
 
 pub struct App {
     pub weather: Option<WeatherWidget>,
-    pub timezone_dropdown: TimezoneDropdown,
+    pub clock: ClockWidget,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
             weather: None,
-            timezone_dropdown: Default::default(),
+            clock: Default::default(),
         }
     }
 }
@@ -32,11 +32,9 @@ impl epi::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::CtxRef, _frame: &mut eframe::epi::Frame<'_>) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            if let Some(widget) = &mut self.weather {
-                widget.ui(ui);
-            }
-            self.timezone_dropdown.ui(ui);
-        });
+        if let Some(widget) = &mut self.weather {
+            widget.show(ctx);
+        }
+        self.clock.show(ctx);
     }
 }

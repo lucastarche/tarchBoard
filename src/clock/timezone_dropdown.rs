@@ -26,3 +26,9 @@ impl View for TimezoneDropdown {
             });
     }
 }
+
+impl TimezoneDropdown {
+    pub fn selected(&self) -> chrono_tz::Tz {
+        self.selected
+    }
+}

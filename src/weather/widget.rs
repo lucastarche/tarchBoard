@@ -1,7 +1,9 @@
-use crate::view::View;
-use crate::weather::query::{retrieve_weather, WeatherResponse};
+use crate::{
+    view::{UiWidget, View},
+    weather::query::{retrieve_weather, WeatherResponse},
+};
 
-use eframe::egui::Ui;
+use eframe::egui::{vec2, Ui, Window};
 use std::time::{Duration, Instant};
 
 pub struct WeatherWidget {
@@ -17,6 +19,19 @@ impl Default for WeatherWidget {
             response: None,
             last_update: Instant::now(),
         }
+    }
+}
+
+impl UiWidget for WeatherWidget {
+    fn name(&self) -> &'static str {
+        "Weather"
+    }
+
+    fn show(&mut self, ctx: &eframe::egui::CtxRef) {
+        Window::new(self.name())
+            .default_size(vec2(400.0, 200.0))
+            .vscroll(false)
+            .show(ctx, |ui| self.ui(ui));
     }
 }
 
