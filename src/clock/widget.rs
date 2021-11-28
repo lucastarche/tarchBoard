@@ -2,16 +2,18 @@ use crate::view::View;
 use crate::{clock::timezone_dropdown::TimezoneDropdown, view::UiWidget};
 
 use chrono::{TimeZone, Timelike, Utc};
-use eframe::egui::{vec2, Ui, Window};
+use eframe::egui::{menu, Ui, Window};
 
 pub struct ClockWidget {
-    timezone: TimezoneDropdown,
+    timezones: Vec<TimezoneDropdown>,
+    config_open: bool,
 }
 
 impl Default for ClockWidget {
     fn default() -> Self {
         Self {
-            timezone: Default::default(),
+            timezones: vec![TimezoneDropdown::new(0)],
+            config_open: false,
         }
     }
 }
@@ -23,24 +25,69 @@ impl UiWidget for ClockWidget {
 
     fn show(&mut self, ctx: &eframe::egui::CtxRef) {
         Window::new(self.name())
-            .default_size(vec2(300.0, 150.0))
             .vscroll(false)
+            .resizable(false)
             .show(ctx, |ui| self.ui(ui));
+
+        if self.config_open {
+            // We create this extra variable since we cant pass self as &mut twice
+            let mut open = true;
+            let mut must_delete: Vec<usize> = Vec::new();
+
+            Window::new("Timezone Config")
+                .open(&mut open)
+                .resizable(false)
+                .show(ctx, |ui| {
+                    ui.heading("Timezones");
+                    for (idx, timezone) in &mut self.timezones.iter_mut().enumerate() {
+                        ui.horizontal(|ui| {
+                            timezone.ui(ui);
+
+                            if ui.button("x").clicked() {
+                                must_delete.push(idx);
+                            }
+                        });
+                    }
+
+                    if ui.button("+").clicked() {
+                        self.timezones
+                            .push(TimezoneDropdown::new(self.timezones.len() as u64));
+                    }
+                });
+
+            for idx in must_delete {
+                self.timezones.remove(idx);
+            }
+
+            for (idx, timezone) in &mut self.timezones.iter_mut().enumerate() {
+                timezone.change_id(idx as u64);
+            }
+
+            self.config_open = open;
+        }
     }
 }
 
 impl View for ClockWidget {
     fn ui(&mut self, ui: &mut Ui) {
-        let now = Utc::now().naive_utc();
-        let local_time = self.timezone.selected().from_utc_datetime(&now);
+        menu::bar(ui, |ui| {
+            if ui.button("Change Timezones").clicked() {
+                self.config_open = true;
+            }
+        });
 
-        ui.ctx().request_repaint();
-        ui.heading(format!(
-            "{}: {}",
-            self.timezone.selected().name(),
-            format_time(local_time)
-        ));
-        self.timezone.ui(ui);
+        let now = Utc::now().naive_utc();
+
+        for timezone in &self.timezones {
+            let local_time = timezone.selected().from_utc_datetime(&now);
+            ui.ctx().request_repaint();
+
+            ui.heading(format!(
+                "{}: {}",
+                timezone.selected().name(),
+                format_time(local_time)
+            ));
+        }
     }
 }
 

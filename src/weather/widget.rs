@@ -3,7 +3,7 @@ use crate::{
     weather::query::{retrieve_weather, WeatherResponse},
 };
 
-use eframe::egui::{vec2, Ui, Window};
+use eframe::egui::{Ui, Window};
 use std::time::{Duration, Instant};
 
 pub struct WeatherWidget {
@@ -14,11 +14,14 @@ pub struct WeatherWidget {
 
 impl Default for WeatherWidget {
     fn default() -> Self {
-        Self {
-            place: Default::default(),
+        let mut widget = Self {
+            place: String::new(), // Empty query makes wttr.in use your current IP instead
             response: None,
             last_update: Instant::now(),
-        }
+        };
+
+        widget.update_weather();
+        widget
     }
 }
 
@@ -29,8 +32,8 @@ impl UiWidget for WeatherWidget {
 
     fn show(&mut self, ctx: &eframe::egui::CtxRef) {
         Window::new(self.name())
-            .default_size(vec2(400.0, 200.0))
             .vscroll(false)
+            .resizable(false)
             .show(ctx, |ui| self.ui(ui));
     }
 }
