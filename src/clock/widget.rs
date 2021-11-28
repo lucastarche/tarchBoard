@@ -2,7 +2,7 @@ use crate::view::View;
 use crate::{clock::timezone_dropdown::TimezoneDropdown, view::UiWidget};
 
 use chrono::{TimeZone, Timelike, Utc};
-use eframe::egui::{menu, Ui, Window};
+use eframe::egui::{self, menu, Ui, Window};
 
 pub struct ClockWidget {
     timezones: Vec<TimezoneDropdown>,
@@ -37,22 +37,35 @@ impl UiWidget for ClockWidget {
             Window::new("Timezone Config")
                 .open(&mut open)
                 .resizable(false)
+                .default_width(200.0)
                 .show(ctx, |ui| {
-                    ui.heading("Timezones");
-                    for (idx, timezone) in &mut self.timezones.iter_mut().enumerate() {
-                        ui.horizontal(|ui| {
-                            timezone.ui(ui);
+                    ui.with_layout(
+                        egui::Layout::top_down_justified(egui::Align::Center),
+                        |ui| {
+                            ui.heading("Timezones");
 
-                            if ui.button("x").clicked() {
-                                must_delete.push(idx);
+                            ui.horizontal(|ui| {
+                                ui.vertical(|ui| {
+                                    for timezone in &mut self.timezones {
+                                        timezone.ui(ui);
+                                    }
+                                });
+
+                                ui.vertical(|ui| {
+                                    for idx in 0..self.timezones.len() {
+                                        if ui.button("x").clicked() {
+                                            must_delete.push(idx);
+                                        }
+                                    }
+                                });
+                            });
+
+                            if ui.button("+").clicked() {
+                                self.timezones
+                                    .push(TimezoneDropdown::new(self.timezones.len() as u64));
                             }
-                        });
-                    }
-
-                    if ui.button("+").clicked() {
-                        self.timezones
-                            .push(TimezoneDropdown::new(self.timezones.len() as u64));
-                    }
+                        },
+                    );
                 });
 
             for idx in must_delete {
