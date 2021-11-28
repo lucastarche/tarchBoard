@@ -1,12 +1,23 @@
+use crate::clock::format_time;
 use crate::view::View;
-use crate::{clock::timezone_dropdown::TimezoneDropdown, view::UiWidget};
+use crate::{
+    clock::{stopwatch::StopwatchWidget, timezone_dropdown::TimezoneDropdown},
+    view::UiWidget,
+};
 
-use chrono::{TimeZone, Timelike, Utc};
+use chrono::{TimeZone, Utc};
 use eframe::egui::{self, menu, Ui, Window};
 
 pub struct ClockWidget {
     timezones: Vec<TimezoneDropdown>,
     config_open: bool,
+    stopwatch: StopwatchWidget,
+    state: State,
+}
+
+enum State {
+    CLOCK,
+    STOPWATCH,
 }
 
 impl Default for ClockWidget {
@@ -14,6 +25,8 @@ impl Default for ClockWidget {
         Self {
             timezones: vec![TimezoneDropdown::new(0)],
             config_open: false,
+            stopwatch: Default::default(),
+            state: State::CLOCK,
         }
     }
 }
@@ -83,39 +96,37 @@ impl UiWidget for ClockWidget {
 
 impl View for ClockWidget {
     fn ui(&mut self, ui: &mut Ui) {
+        ui.ctx().request_repaint();
+
         menu::bar(ui, |ui| {
             if ui.button("Change Timezones").clicked() {
                 self.config_open = true;
             }
+
+            if ui.button("Clock").clicked() {
+                self.state = State::CLOCK;
+            }
+
+            if ui.button("Stopwatch").clicked() {
+                self.state = State::STOPWATCH;
+            }
         });
 
-        let now = Utc::now().naive_utc();
+        match self.state {
+            State::CLOCK => {
+                let now = Utc::now().naive_utc();
 
-        for timezone in &self.timezones {
-            let local_time = timezone.selected().from_utc_datetime(&now);
-            ui.ctx().request_repaint();
+                for timezone in &self.timezones {
+                    let local_time = timezone.selected().from_utc_datetime(&now);
 
-            ui.heading(format!(
-                "{}: {}",
-                timezone.selected().name(),
-                format_time(local_time)
-            ));
+                    ui.heading(format!(
+                        "{}: {}",
+                        timezone.selected().name(),
+                        format_time(local_time)
+                    ));
+                }
+            }
+            State::STOPWATCH => self.stopwatch.ui(ui),
         }
-    }
-}
-
-fn format_time<T: chrono::TimeZone>(time: chrono::DateTime<T>) -> String {
-    let hour = format_time_number(time.hour());
-    let minute = format_time_number(time.minute());
-    let second = format_time_number(time.second());
-
-    format!("{}:{}:{}", hour, minute, second)
-}
-
-fn format_time_number(x: u32) -> String {
-    if x < 10 {
-        format!("0{}", x)
-    } else {
-        x.to_string()
     }
 }
