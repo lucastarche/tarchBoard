@@ -15,7 +15,7 @@ fn format_time<T: chrono::TimeZone>(time: chrono::DateTime<T>) -> String {
     format!("{}:{}:{}", hour, minute, second)
 }
 
-fn format_duration(duration: Duration) -> String {
+fn format_duration(duration: &Duration) -> String {
     let hour = format_time_number((duration.as_secs() / 3600) as u32, 2);
     let minute = format_time_number((duration.as_secs() / 60 % 60) as u32, 2);
     let second = format_time_number((duration.as_secs() % 60) as u32, 2);
@@ -36,7 +36,7 @@ fn format_time_number(x: u32, mut width: u32) -> String {
         }
     }
 
-    for i in 0..width {
+    for _ in 0..width {
         ans.push('0');
     }
 

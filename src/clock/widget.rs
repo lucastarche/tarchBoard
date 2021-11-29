@@ -15,6 +15,7 @@ pub struct ClockWidget {
     state: State,
 }
 
+#[derive(Eq, PartialEq)]
 enum State {
     CLOCK,
     STOPWATCH,
@@ -38,7 +39,6 @@ impl UiWidget for ClockWidget {
 
     fn show(&mut self, ctx: &eframe::egui::CtxRef) {
         Window::new(self.name())
-            .vscroll(false)
             .resizable(false)
             .show(ctx, |ui| self.ui(ui));
 
@@ -56,18 +56,17 @@ impl UiWidget for ClockWidget {
                         egui::Layout::top_down_justified(egui::Align::Center),
                         |ui| {
                             ui.heading("Timezones");
-
                             ui.horizontal(|ui| {
-                                ui.vertical(|ui| {
-                                    for timezone in &mut self.timezones {
+                                ui.vertical_centered_justified(|ui| {
+                                    for timezone in self.timezones.iter_mut() {
                                         timezone.ui(ui);
                                     }
                                 });
 
-                                ui.vertical(|ui| {
-                                    for idx in 0..self.timezones.len() {
+                                ui.vertical_centered_justified(|ui| {
+                                    for i in 0..self.timezones.len() {
                                         if ui.button("x").clicked() {
-                                            must_delete.push(idx);
+                                            must_delete.push(i);
                                         }
                                     }
                                 });
@@ -103,28 +102,27 @@ impl View for ClockWidget {
                 self.config_open = true;
             }
 
-            if ui.button("Clock").clicked() {
-                self.state = State::CLOCK;
-            }
-
-            if ui.button("Stopwatch").clicked() {
-                self.state = State::STOPWATCH;
-            }
+            ui.selectable_value(&mut self.state, State::CLOCK, "Clock");
+            ui.selectable_value(&mut self.state, State::STOPWATCH, "Stopwatch");
         });
+
+        ui.separator();
 
         match self.state {
             State::CLOCK => {
                 let now = Utc::now().naive_utc();
 
-                for timezone in &self.timezones {
-                    let local_time = timezone.selected().from_utc_datetime(&now);
+                ui.vertical_centered(|ui| {
+                    for timezone in &self.timezones {
+                        let local_time = timezone.selected().from_utc_datetime(&now);
 
-                    ui.heading(format!(
-                        "{}: {}",
-                        timezone.selected().name(),
-                        format_time(local_time)
-                    ));
-                }
+                        ui.heading(format!(
+                            "{}: {}",
+                            timezone.selected().name(),
+                            format_time(local_time)
+                        ));
+                    }
+                });
             }
             State::STOPWATCH => self.stopwatch.ui(ui),
         }
