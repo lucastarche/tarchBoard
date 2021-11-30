@@ -8,17 +8,21 @@ use crate::{
 use chrono::{TimeZone, Utc};
 use eframe::egui::{self, menu, Ui, Window};
 
+use super::timer::TimerWidget;
+
 pub struct ClockWidget {
     timezones: Vec<TimezoneDropdown>,
     config_open: bool,
-    stopwatch: StopwatchWidget,
     state: State,
+    stopwatch: StopwatchWidget,
+    timer: TimerWidget,
 }
 
 #[derive(Eq, PartialEq)]
 enum State {
     CLOCK,
     STOPWATCH,
+    TIMER,
 }
 
 impl Default for ClockWidget {
@@ -26,8 +30,9 @@ impl Default for ClockWidget {
         Self {
             timezones: vec![TimezoneDropdown::new(0)],
             config_open: false,
-            stopwatch: Default::default(),
             state: State::CLOCK,
+            stopwatch: Default::default(),
+            timer: Default::default(),
         }
     }
 }
@@ -104,6 +109,7 @@ impl View for ClockWidget {
 
             ui.selectable_value(&mut self.state, State::CLOCK, "Clock");
             ui.selectable_value(&mut self.state, State::STOPWATCH, "Stopwatch");
+            ui.selectable_value(&mut self.state, State::TIMER, "Timer");
         });
 
         ui.separator();
@@ -125,6 +131,7 @@ impl View for ClockWidget {
                 });
             }
             State::STOPWATCH => self.stopwatch.ui(ui),
+            State::TIMER => self.timer.ui(ui),
         }
     }
 }

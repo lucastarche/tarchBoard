@@ -1,8 +1,9 @@
 mod stopwatch;
+mod timer;
 mod timezone_dropdown;
 mod widget;
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use chrono::Timelike;
 pub use widget::ClockWidget;
@@ -15,13 +16,17 @@ fn format_time<T: chrono::TimeZone>(time: chrono::DateTime<T>) -> String {
     format!("{}:{}:{}", hour, minute, second)
 }
 
-fn format_duration(duration: &Duration) -> String {
+fn format_duration(duration: &Duration, show_millis: bool) -> String {
     let hour = format_time_number((duration.as_secs() / 3600) as u32, 2);
     let minute = format_time_number((duration.as_secs() / 60 % 60) as u32, 2);
     let second = format_time_number((duration.as_secs() % 60) as u32, 2);
-    let millis = format_time_number(duration.subsec_millis(), 3);
 
-    format!("{}:{}:{}:{}", hour, minute, second, millis)
+    if show_millis {
+        let millis = format_time_number(duration.subsec_millis(), 3);
+        format!("{}:{}:{}:{}", hour, minute, second, millis)
+    } else {
+        format!("{}:{}:{}", hour, minute, second)
+    }
 }
 
 fn format_time_number(x: u32, mut width: u32) -> String {
@@ -30,7 +35,7 @@ fn format_time_number(x: u32, mut width: u32) -> String {
     if x == 0 {
         width -= 1;
     } else {
-        while pow <= x {
+        while pow <= x && width > 0 {
             pow *= 10;
             width -= 1;
         }
@@ -41,4 +46,46 @@ fn format_time_number(x: u32, mut width: u32) -> String {
     }
 
     format!("{}{}", ans, x.to_string())
+}
+
+struct Stopwatch {
+    current: Option<Instant>,
+    duration: Duration,
+}
+
+impl Default for Stopwatch {
+    fn default() -> Self {
+        Self {
+            current: None,
+            duration: Duration::default(),
+        }
+    }
+}
+
+impl Stopwatch {
+    pub fn play_pause(&mut self) {
+        if let Some(instant) = &self.current {
+            self.duration = self.duration + instant.elapsed();
+            self.current = None;
+        } else {
+            self.current = Some(Instant::now());
+        }
+    }
+
+    pub fn stop(&mut self) {
+        self.duration = Duration::default();
+        self.current = None;
+    }
+
+    pub fn elapsed(&self) -> Duration {
+        if let Some(instant) = &self.current {
+            self.duration + instant.elapsed()
+        } else {
+            self.duration
+        }
+    }
+
+    pub fn running(&self) -> bool {
+        self.current.is_some()
+    }
 }
