@@ -1,5 +1,6 @@
 mod app;
 mod clock;
+mod load_image;
 mod view;
 mod weather;
 
