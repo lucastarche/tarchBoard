@@ -2,11 +2,22 @@ use anyhow::Result;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
+use tokio::sync::oneshot;
 
-pub fn retrieve_weather(query: &str) -> Result<WeatherResponse> {
+use crate::message::*;
+
+pub fn retrieve_weather(tx: MessageSender, query: &str) -> OneshotReceiver<WeatherResponse> {
     let query = format!("https://wttr.in/{}?format=j1", query);
-    let response: WeatherResponse = ureq::get(&query).call()?.into_json()?;
-    Ok(response)
+    let (send, recv) = oneshot::channel();
+    let _ = tx.send(Message::FetchNewResource { url: query, send });
+    recv
+}
+
+pub async fn fetch_weather(tx: OneshotSender<WeatherResponse>, url: String) -> Result<()> {
+    let resp = reqwest::get(url).await?.text().await?;
+    let weather_response: WeatherResponse = serde_json::from_str(&resp)?;
+    let _ = tx.send(weather_response);
+    Ok(())
 }
 
 #[derive(Serialize, Deserialize)]

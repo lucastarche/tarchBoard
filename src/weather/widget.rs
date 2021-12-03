@@ -1,4 +1,5 @@
 use crate::{
+    message::{MessageSender, OneshotReceiver},
     view::{UiWidget, View},
     weather::query::{retrieve_weather, WeatherResponse},
 };
@@ -10,18 +11,32 @@ pub struct WeatherWidget {
     place: String,
     response: Option<WeatherResponse>,
     last_update: Instant,
+    tx: MessageSender,
+    weather_receiver: Option<OneshotReceiver<WeatherResponse>>,
 }
 
-impl Default for WeatherWidget {
-    fn default() -> Self {
+impl WeatherWidget {
+    pub fn new(tx: MessageSender) -> Self {
         let mut widget = Self {
             place: String::new(), // Empty query makes wttr.in use your current IP instead
-            response: None,
+            response: Default::default(),
             last_update: Instant::now(),
+            tx,
+            weather_receiver: Default::default(),
         };
 
         widget.update_weather();
         widget
+    }
+
+    pub fn set_query(&mut self, place: String) {
+        self.place = place;
+        self.update_weather();
+    }
+
+    fn update_weather(&mut self) {
+        self.last_update = Instant::now();
+        self.weather_receiver = Some(retrieve_weather(self.tx.clone(), &self.place));
     }
 }
 
@@ -46,6 +61,12 @@ impl View for WeatherWidget {
             self.update_weather();
         }
 
+        if let Some(recv) = &mut self.weather_receiver {
+            if let Ok(response) = recv.try_recv() {
+                self.response = Some(response);
+            }
+        }
+
         if let Some(response) = &self.response {
             let current_condition = &response.current_condition;
             let nearest_area = &response.nearest_area;
@@ -66,21 +87,6 @@ impl View for WeatherWidget {
             ));
         } else {
             ui.label("Could not retrieve weather data");
-        }
-    }
-}
-
-impl WeatherWidget {
-    pub fn set_query(&mut self, place: String) {
-        self.place = place;
-        self.update_weather();
-    }
-
-    fn update_weather(&mut self) {
-        self.last_update = Instant::now();
-        match retrieve_weather(&self.place) {
-            Ok(weather) => self.response = Some(weather),
-            Err(why) => println!("Error retrieving weather: {}", why),
         }
     }
 }
