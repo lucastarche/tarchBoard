@@ -3,8 +3,8 @@ use crate::schema::{KanbanBoards, KanbanColumns, KanbanTasks};
 use crate::utility_widgets::TextInput;
 use crate::view::{UiWidget, View};
 
-use diesel::{insert_into, ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
-use eframe::egui::{menu, Ui, Window};
+use diesel::{delete, insert_into, ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
+use eframe::egui::{menu, Grid, Label, RichText, ScrollArea, Sense, Ui, Window};
 use std::mem;
 use std::rc::Rc;
 
@@ -18,9 +18,20 @@ pub struct KanbanWidget {
 
 impl KanbanWidget {
     pub fn new(db: Rc<SqliteConnection>) -> Self {
+        let res = KanbanBoards::table
+            .limit(1)
+            .load::<KanbanBoard>(&*db)
+            .expect("Error retrieving default board");
+
+        let current_board = if res.len() == 1 {
+            Some(res[0].clone())
+        } else {
+            None
+        };
+
         Self {
             db,
-            current_board: Default::default(),
+            current_board,
             new_board: TextInput::new("Board name".to_string()),
             new_column: TextInput::new("Column name".to_string()),
         }
@@ -41,22 +52,43 @@ impl KanbanWidget {
             .expect("Error loading columns");
 
         ui.vertical_centered(|ui| ui.heading(&board.board_name));
-        ui.horizontal(|ui| {
-            for column in &columns {
-                let tasks = KanbanTasks::table
-                    .filter(KanbanTasks::columnID.eq(column.column_id))
-                    .load::<KanbanTask>(&*self.db)
-                    .expect("Error loading tasks");
+        ScrollArea::horizontal().show(ui, |ui| {
+            Grid::new("kanban_grid")
+                .min_col_width(100.0)
+                .show(ui, |ui| {
+                    for column in &columns {
+                        ui.vertical_centered(|ui| {
+                            let response = ui.add(
+                                Label::new(RichText::new(&column.column_name).heading())
+                                    .sense(Sense::click()),
+                            );
 
-                ui.vertical(|ui| {
-                    ui.heading(&column.column_name);
-                    for task in &tasks {
-                        ui.label(&task.task_name);
+                            response.context_menu(|ui| {
+                                if ui.button("Delete").clicked() {
+                                    delete(KanbanColumns::table)
+                                        .filter(KanbanColumns::columnID.eq(&column.column_id))
+                                        .execute(&*self.db)
+                                        .expect("Error deleting KanbanColumn");
+                                }
+                            });
+                        });
+                    }
+                    self.new_column.ui(ui);
+                    ui.end_row();
+
+                    for column in &columns {
+                        let tasks = KanbanTasks::table
+                            .filter(KanbanTasks::columnID.eq(column.column_id))
+                            .load::<KanbanTask>(&*self.db)
+                            .expect("Error loading tasks");
+
+                        ui.vertical(|ui| {
+                            for task in &tasks {
+                                ui.label(&task.task_name);
+                            }
+                        });
                     }
                 });
-            }
-
-            self.new_column.ui(ui);
         });
 
         if self.new_column.clicked() {
@@ -88,7 +120,7 @@ impl UiWidget for KanbanWidget {
 impl View for KanbanWidget {
     fn ui(&mut self, ui: &mut Ui) {
         menu::bar(ui, |ui| {
-            menu::menu(ui, "Boards", |ui| {
+            menu::menu_button(ui, "Boards", |ui| {
                 let boards: Vec<KanbanBoard> = KanbanBoards::table
                     .load::<KanbanBoard>(&*self.db)
                     .expect("Error loading boards");
@@ -98,24 +130,21 @@ impl View for KanbanWidget {
                         self.current_board = Some(board.clone());
                     }
                 }
+
+                self.new_board.ui(ui);
+                if self.new_board.clicked() {
+                    let new_board = NewKanbanBoard {
+                        board_name: mem::replace(&mut self.new_board.value, String::new()),
+                    };
+
+                    insert_into(KanbanBoards::table)
+                        .values(&new_board)
+                        .execute(&*self.db)
+                        .expect("Error inserting new KanbanBoard");
+                }
             });
         });
 
         self.display_board(ui);
-
-        ui.separator();
-
-        ui.heading("Create new board");
-        self.new_board.ui(ui);
-        if self.new_board.clicked() {
-            let new_board = NewKanbanBoard {
-                board_name: mem::replace(&mut self.new_board.value, String::new()),
-            };
-
-            insert_into(KanbanBoards::table)
-                .values(&new_board)
-                .execute(&*self.db)
-                .expect("Error inserting new KanbanBoard");
-        }
     }
 }

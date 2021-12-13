@@ -10,7 +10,7 @@ diesel = { version = "1.4.4", features = ["sqlite"] }
 dotenv = "0.15.0"
 tokio = { version = "1", features = ["full"] }
 
-eframe = { version = "*", default-features = false, features = ["default_fonts", "egui_glow"] }
+eframe = { git = "https://github.com/emilk/egui", default-features = false, features = ["default_fonts", "egui_glow"] }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
