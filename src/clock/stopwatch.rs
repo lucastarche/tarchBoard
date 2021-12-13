@@ -1,7 +1,7 @@
 use crate::view::View;
 
-use eframe::egui::{self, ScrollArea, Ui};
-use std::time::{Duration, Instant};
+use eframe::egui::{ScrollArea, Ui};
+use std::time::Duration;
 
 use super::{format_duration, Stopwatch};
 

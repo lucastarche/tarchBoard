@@ -19,7 +19,6 @@ async fn async_thread(mut rx: MessageReceiver) -> Result<()> {
             Message::FetchNewResource { url, send } => {
                 fetch_weather(send, url).await?;
             }
-            _ => todo!(),
         }
     }
 

@@ -1,4 +1,4 @@
-use eframe::egui::{Align, Direction, DragValue, Layout};
+use eframe::egui::DragValue;
 
 use crate::view::View;
 

@@ -10,14 +10,9 @@ pub type OneshotReceiver<T> = oneshot::Receiver<T>;
 pub type MessageSender = UnboundedSender<Message>;
 pub type MessageReceiver = UnboundedReceiver<Message>;
 
-#[derive(Debug)]
 pub enum Message {
     FetchNewResource {
         url: String,
         send: OneshotSender<WeatherResponse>,
-    },
-    DBQuery {
-        query: String,
-        send: OneshotSender<Self>,
     },
 }
