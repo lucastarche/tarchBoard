@@ -1,24 +1,33 @@
 use crate::{
-    clock::ClockWidget, load_image::load_image, message::MessageSender, view::UiWidget,
-    weather::WeatherWidget,
+    clock::ClockWidget, kanban::KanbanWidget, load_image::load_image, message::MessageSender,
+    view::UiWidget, weather::WeatherWidget,
 };
 
+use diesel::SqliteConnection;
 use eframe::{egui, epi};
+use std::rc::Rc;
 
 pub struct App {
+    tx: MessageSender,
+    db: Rc<SqliteConnection>,
+
     background: Option<(egui::Vec2, egui::TextureId)>,
+
     weather: WeatherWidget,
     clock: ClockWidget,
-    tx: MessageSender,
+    kanban: KanbanWidget,
 }
 
 impl App {
-    pub fn new(tx: MessageSender) -> Self {
+    pub fn new(tx: MessageSender, db: SqliteConnection) -> Self {
+        let db = Rc::new(db);
         Self {
+            background: None,
             weather: WeatherWidget::new(tx.clone()),
             clock: Default::default(),
-            background: None,
+            kanban: KanbanWidget::new(db.clone()),
             tx,
+            db,
         }
     }
 
@@ -59,7 +68,9 @@ impl epi::App for App {
                     ui.image(id, size);
                 });
         }
+
         self.weather.show(ctx);
         self.clock.show(ctx);
+        self.kanban.show(ctx);
     }
 }

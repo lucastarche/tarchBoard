@@ -1,11 +1,20 @@
+#[macro_use]
+extern crate diesel;
+extern crate dotenv;
+
+mod schema;
+
 mod app;
 mod clock;
+mod kanban;
 mod load_image;
 mod message;
+mod utility_widgets;
 mod view;
 mod weather;
 
 use anyhow::Result;
+use diesel::{Connection, SqliteConnection};
 use std::thread;
 use tokio::sync::mpsc;
 
@@ -26,6 +35,11 @@ async fn async_thread(mut rx: MessageReceiver) -> Result<()> {
 }
 
 fn main() {
+    dotenv::dotenv().ok();
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set!");
+    let connection = SqliteConnection::establish(&database_url)
+        .expect(&format!("Error connecting to: {}", database_url));
+
     let (tx, rx) = mpsc::unbounded_channel();
 
     thread::spawn(move || {
@@ -36,7 +50,8 @@ fn main() {
             .block_on(async_thread(rx))
     });
 
-    let mut app = App::new(tx);
+    println!("Started!");
+    let mut app = App::new(tx, connection);
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(Box::new(app), native_options);
 }
